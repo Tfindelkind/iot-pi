@@ -4,11 +4,13 @@ import time
 from datetime import datetime, timezone
 
 # Change to your needs
-minBattery = 30         # Minimum Battery charge 
+minBattery = 30         # Minimum Battery charge until do anything
+allowedBattery = 80     # use heater independent of consumption 
 cycleTime = 10*60       # Recheck every cycleTime in seconds
 excesslevel1 = 2500     # Which minimum excess in w to turn on level 1
 excesslevel2 = 4500     # Which minimum excess in w to turn on level 2
 excesslevel3 = 6500     # Which minimum excess in w to turn on level 3
+level_power = 2000      # estimated usage per level in w
 delta = 500             # What excess should be left over if heater are on
 
 # Mapp relay to raspberry pin number
@@ -70,39 +72,56 @@ while True:
     if battery_soc >= minBattery: 
         cursor.execute(sql_get_avg_excess)              # Get avg actual excess of the last 10 Minutes
         avg_access = cursor.fetchone()[0]
+
+        if GPIO.input(relay1pin) == 1:
+            heater_used = level_power
+            if GPIO.input(relay2pin) == 1:
+                heater_used += level_power
+                if GPIO.input(relay3pin) == 1:
+                    heater_used += level_power                
+        else:
+            heater_used = 0
+
        
         # Heater level 1
         if GPIO.input(relay1pin) == 1:                        # If heater level 1 is already on just make sure there is a delta left
-            if avg_access >= delta:                                                        
+            if battery_soc >= allowedBattery:                                                        
                 GPIO.output(relay1pin, True)                 # Turn on heating on level 1
-            else:               
-                GPIO.output(relay1pin, False)                # Turn off heating on level 1
+                print("R1-1")
+            else:  
+                if avg_access+heater_used <= excesslevel1:           
+                    GPIO.output(relay1pin, False)            # Turn off heating on level 1
+                    print("R1-2")
         else:
             if avg_access >= excesslevel1:                                                        
                 GPIO.output(relay1pin, True)                 # Turn on heating on level 1
+                print("R1-3")
             else:               
                 GPIO.output(relay1pin, False)                # Turn off heating on level 1
+                print("R1-4")
                 
         # Heater level 2
         if GPIO.input(relay2pin) == 1:
-            if avg_access >= delta:                                                        
+            if battery_soc >= allowedBattery:                                                         
                 GPIO.output(relay2pin, True)                 # Turn on heating on level 2
-            else:               
-                GPIO.output(relay2pin, False)                # Turn off heating on level 2
+            else:
+                if avg_access+heater_used <= excesslevel2:               
+                    GPIO.output(relay2pin, False)                # Turn off heating on level 2
         else:    
-            if avg_access >= excesslevel2:     
+            if avg_access >= excesslevel2-heater_used:     
                 GPIO.output(relay2pin, True)                  # Turn on heating on level 2
             else: 
                 GPIO.output(relay2pin, False)                 # Turn off heating on level 2
 
         # Heater level 3
         if GPIO.input(relay3pin) == 1:
-            if avg_access >= delta:                                                        
+            if battery_soc >= allowedBattery:                                                        
                 GPIO.output(relay3pin, True)                 # Turn on heating on level 3
-            else:               
-                GPIO.output(relay3pin, False)                # Turn off heating on level 3
+            else:   
+                if avg_access+heater_used <= excesslevel3:
+                    GPIO.output(relay3pin, False)                # Turn off heating on level 3
         else:            
-            if avg_access >= excesslevel3:     
+            if avg_access >= excesslevel3-heater_used:     
                 GPIO.output(relay3pin, True)                  # Turn on heating on level 3
             else: 
                 GPIO.output(relay3pin, False)                 # Turn off heating on level 3
@@ -112,7 +131,9 @@ while True:
     dt = datetime.now(timezone.utc)
     # Log actual status to database
     cursor.execute(sql_insert_query,(dt,GPIO.input(relay1pin),GPIO.input(relay2pin),GPIO.input(relay3pin),GPIO.input(relay4pin),GPIO.input(relay5pin),GPIO.input(relay6pin),GPIO.input(relay7pin),GPIO.input(relay8pin),minBattery,cycleTime,excesslevel1,excesslevel2,excesslevel3,delta,avg_access))
-
+    print("battery_soc: "+str(battery_soc))
+    print("heater_used: "+str(heater_used))
+    print("avg_acess: "+str(avg_access))
     # Wait for 10 Minutes 
     time.sleep(cycleTime)                     
  

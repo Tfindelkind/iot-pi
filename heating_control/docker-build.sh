@@ -1,1 +1,1 @@
-docker build -t tfindelkind/iot-pi .
+docker build -t tfindelkind/hc .
