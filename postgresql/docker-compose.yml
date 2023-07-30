@@ -12,7 +12,8 @@ services:
   # Note: This may change the commands you are going to use a little bit.
   database:
     # Official Postgres image from DockerHub (we use the last version)
-    image: 'postgres:latest'
+    image: 'postgres:14'
+    restart: always
 
     # The `volumes` tag allows us to share a folder with our container.
     # Its syntax is as follows: [folder path on our machine]:[folder path to retrieve in the container]
