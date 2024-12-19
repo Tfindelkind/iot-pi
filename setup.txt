@@ -1,0 +1,6 @@
+#install iot-hub
+
+#install raspbian
+install ssh               https://phoenixnap.com/kb/enable-ssh-raspberry-pi
+install docker            docker man
+install docker-compose    https://linuxpip.org/install-docker-and-docker-compose-on-raspberry-pi/?utm_content=cmp-true
