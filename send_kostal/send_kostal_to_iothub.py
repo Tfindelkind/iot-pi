@@ -1,6 +1,6 @@
 import pymodbus
 import psycopg2
-from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client import ModbusTcpClient
 from pymodbus.constants import Endian
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
@@ -181,7 +181,7 @@ class kostal_modbusquery:
     #-----------------------------------------
     # Routine to read a string from one address with 8 registers
     def ReadStr8(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,8,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,8,slave=71)
         STRG8Register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big)
         result_STRG8Register =STRG8Register.decode_string(8)
         result_STRG8Register = bytes(filter(None,result_STRG8Register))    #Get rid of the "\X00"s
@@ -189,7 +189,7 @@ class kostal_modbusquery:
     #-----------------------------------------
     # Routine to read a string from one address with 32 registers
     def ReadStr32(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,32,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,32,slave=71)
         STRG32Register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big)
         result_STRG32Register =STRG32Register.decode_string(32)
         result_STRG32Register =bytes(filter(None,result_STRG32Register))    #Get rid of the "\X00"s
@@ -197,28 +197,28 @@ class kostal_modbusquery:
     #-----------------------------------------
     # Routine to read a Float from one address with 2 registers
     def ReadFloat(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,2,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,2,slave=71)
         FloatRegister = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         result_FloatRegister =round(FloatRegister.decode_32bit_float(),2)
         return(result_FloatRegister)
     #-----------------------------------------
     # Routine to read a U16 from one address with 1 register
     def ReadU16_1(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,1,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,1,slave=71)
         U16register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         result_U16register = U16register.decode_16bit_uint()
         return(result_U16register)
     #-----------------------------------------
     # Routine to read a U16 from one address with 2 registers
     def ReadU16_2(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,2,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,2,slave=71)
         U16register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         result_U16register = U16register.decode_16bit_uint()
         return(result_U16register)
     #-----------------------------------------
     # Routine to read a U32 from one address with 2 registers
     def ReadU32(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,2,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,2,slave=71)
         #print ("r1 ", rl.registers)
         U32register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         #print ("U32register is", U32register)
@@ -228,7 +228,7 @@ class kostal_modbusquery:
     #-----------------------------------------
     def ReadU32new(self,myadr_dec):
         #print ("I am in ReadU32new with", myadr_dec)
-        r1=self.client.read_holding_registers(myadr_dec,2,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,2,slave=71)
         U32register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         result_U32register = U32register.decode_32bit_uint()
         #result_U32register = U32register.decode_32bit_float()
@@ -237,14 +237,14 @@ class kostal_modbusquery:
     #-----------------------------------------
     # Routine to read a S16 from one address with 1 registers
     def ReadS16(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,1,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,1,slave=71)
         S16register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         result_S16register = S16register.decode_16bit_int()
         return(result_S16register)
     #-----------------------------------------
     # Routine to read a U8 from one address with 1 registers
     def ReadU8(self,myadr_dec):
-        r1=self.client.read_holding_registers(myadr_dec,1,unit=71)
+        r1=self.client.read_holding_registers(myadr_dec,1,slave=71)
         U8register = BinaryPayloadDecoder.fromRegisters(r1.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         #result_U8register = U8register.decode_8bit_uint()
         result_U8register = U8register.decode_16bit_uint()
@@ -252,14 +252,14 @@ class kostal_modbusquery:
 
     def WriteR32(self,myadr_dec,value):
 
-        myreadregister= self.client.read_holding_registers(myadr_dec,2,unit=71)
+        myreadregister= self.client.read_holding_registers(myadr_dec,2,slave=71)
         myreadregister = BinaryPayloadDecoder.fromRegisters(myreadregister.registers, byteorder=Endian.Big, wordorder=Endian.Little)
         myreadregister =round(myreadregister.decode_32bit_float(),2)
         print ("I read the value before setting it - value was ", myreadregister)
         mybuilder = BinaryPayloadBuilder(byteorder=Endian.Big,wordorder=Endian.Little)
         mybuilder.add_32bit_float(value)
         mypayload = mybuilder.build()
-        mywriteregister=self.client.write_registers(myadr_dec,mypayload,skip_encode=True, unit=71)
+        mywriteregister=self.client.write_registers(myadr_dec,mypayload,skip_encode=True, slave=71)
         """
         print ("From  subroutine WriteS16 - In theory .... - I should get the value back that we pushed ", value ,"----", myreadregister)
         print("Register I wrote",mywriteregister)
