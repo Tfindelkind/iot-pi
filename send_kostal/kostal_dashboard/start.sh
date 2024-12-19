@@ -1,2 +1,2 @@
-docker run --network=host --privileged --restart always --env-file .env -d tfindelkind/kostal-dashboard
+docker run --network=host --privileged --restart always -d tfindelkind/kostal-dashboard
 
