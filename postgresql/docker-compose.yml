@@ -11,7 +11,11 @@ services:
   # but you can use the name of your choice.
   # Note: This may change the commands you are going to use a little bit.
   database:
+<<<<<<< HEAD
     # Official Postgres image from DockerHub (we use the last version)  
+=======
+    # Official Postgres image from DockerHub (we use the last version)
+>>>>>>> 68e6ed537811fe953d29b5843d5569517e0f09ff
     image: 'postgres:14'
     restart: always
 
