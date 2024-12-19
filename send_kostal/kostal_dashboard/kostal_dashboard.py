@@ -1,6 +1,6 @@
 import pymodbus
 import psycopg2
-from pymodbus.client import ModbusTcpClient
+from pymodbus.client.tcp import ModbusTcpClient
 from pymodbus.constants import Endian
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
@@ -19,13 +19,6 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 logging.basicConfig(level=logging.ERROR)
 
-# Initialize InfluxDB client
-token = "JHNPZKbzCpQnivzr4ufE_GiUWrYwqIWBf_rcLkXcrn1Mds8srcDpMYH8mxj7SosSRx0W2swfnI5WgJXGlBQYBw=="
-org = "home"
-bucket = "kostal"
-url = "http://192.168.178.112:8086"
-client = InfluxDBClient(url=url, token=token, org=org)
-
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
 model_id = "dtmi:com:kostal:plenticoreplus10:tfindelkind;1"
@@ -34,30 +27,15 @@ conn = psycopg2.connect(database="iot-pi",
                         user="iot-pi",
                         password="iot-pi",
                         port="5432")
-conn.autocommit = True  
+conn.autocommit = True       
+
+# InfluxDB configuration
+bucket = "kostal"
+org = "home"
+token = "JHNPZKbzCpQnivzr4ufE_GiUWrYwqIWBf_rcLkXcrn1Mds8srcDpMYH8mxj7SosSRx0W2swfnI5WgJXGlBQYBw=="
+url = "http://192.168.178.111:32772"
 
 
-# Function to store data into InfluxDB
-def store_data_in_influxdb(data):
-    point = Point("telemetry") \
-        .tag("location", "your-location") \
-        .field("pv_dc_power1", data["pv_dc_power1"]) \
-        .field("pv_dc_power2", data["pv_dc_power2"]) \
-        .field("own_consumption_from_battery", data["own_consumption_from_battery"]) \
-        .field("own_consumption_from_grid", data["own_consumption_from_grid"]) \
-        .field("own_consumption_from_pv", data["own_consumption_from_pv"]) \
-        .field("battery_cycles", data["battery_cycles"]) \
-        .field("actual_battery_charging", data["actual_battery_charging"]) \
-        .field("battery_voltage", data["battery_voltage"]) \
-        .field("battery_soc", data["battery_soc"]) \
-        .field("inverter_generation_power", data["inverter_generation_power"]) \
-        .field("battery_net_capacity", data["battery_net_capacity"]) \
-        .field("actual_battery_charge_power", data["actual_battery_charge_power"]) \
-        .time(data["timestamp"], WritePrecision.NS)
-
-    write_api.write(bucket=bucket, org=org, record=point)
-
-                   
 class kostal_modbusquery:
     def __init__(self):
         #Change the IP address and port to suite your environment:
@@ -332,7 +310,6 @@ class kostal_modbusquery:
             print ("XXX- Hit the following error :From subroutine kostal_modbusquery:", ex)
             print ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 
-
 #####################################################
 # EXECUTE MAIN
 
@@ -371,9 +348,9 @@ if __name__ == "__main__":
             #print ("Powerfromgrid (-) /To Grid (+) is        :", PowertoGrid)
             #print ("Total current Home consumption is        :", TotalHomeconsumption)
             #print ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-
+                               
             cursor = conn.cursor()
-
+            
             # Prepare Insert Statement 
             sql_insert_query = 'INSERT INTO telemetry(pv_dc_power1, pv_dc_power2, timestamp, own_consumption_from_battery, own_consumption_from_grid, own_consumption_from_pv, battery_cycles, actual_battery_charging, battery_voltage, battery_soc, inverter_generation_power, battery_net_capacity, actual_battery_charge_power) \
                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
@@ -386,29 +363,41 @@ if __name__ == "__main__":
                Kostalquery.Qty['Number of battery cycles'][3], Kostalquery.Qty['Actual battery charge -minus or discharge -plus current'][3], Kostalquery.Qty['Battery voltage'][3], Kostalquery.Qty['Battery actual SOC'][3] , Kostalquery.Qty['Inverter Generation Power (actual)'][3], \
                Kostalquery.Qty['Battery Net Capacity'][3], Kostalquery.Qty['Actual battery charge-discharge power'][3]))
 
-            # Store data into InfluxDB
-            influx_data = {
-                "pv_dc_power1": Kostalquery.Qty['Power DC1'][3],
-                "pv_dc_power2": Kostalquery.Qty['Power DC2'][3],
-                "timestamp": dt.isoformat(),
-                "own_consumption_from_battery": Kostalquery.Qty['Home own consumption from battery'][3],
-                "own_consumption_from_grid": Kostalquery.Qty['Home own consumption from grid'][3],
-                "own_consumption_from_pv": Kostalquery.Qty['Home own consumption from PV'][3],
-                "battery_cycles": Kostalquery.Qty['Number of battery cycles'][3],
-                "actual_battery_charging": Kostalquery.Qty['Actual battery charge -minus or discharge -plus current'][3],
-                "battery_voltage": Kostalquery.Qty['Battery voltage'][3],
-                "battery_soc": Kostalquery.Qty['Battery actual SOC'][3],
-                "inverter_generation_power": Kostalquery.Qty['Inverter Generation Power (actual)'][3],
-                "battery_net_capacity": Kostalquery.Qty['Battery Net Capacity'][3],
-                "actual_battery_charge_power": Kostalquery.Qty['Actual battery charge-discharge power'][3]
-            }
-            store_data_in_influxdb(influx_data)
+            
 
+            # Create InfluxDB client
+            client = InfluxDBClient(url=url, token=token, org=org)
+            write_api = client.write_api(write_options=SYNCHRONOUS)
+
+            # Prepare data to insert
+            point = Point("telemetry") \
+                .field("pv_dc_power1", Kostalquery.Qty['Power DC1'][3]) \
+                .field("pv_dc_power2", Kostalquery.Qty['Power DC2'][3]) \
+                .field("own_consumption_from_battery", Kostalquery.Qty['Home own consumption from battery'][3]) \
+                .field("own_consumption_from_grid", Kostalquery.Qty['Home own consumption from grid'][3]) \
+                .field("own_consumption_from_pv", Kostalquery.Qty['Home own consumption from PV'][3]) \
+                .field("battery_cycles", Kostalquery.Qty['Number of battery cycles'][3]) \
+                .field("actual_battery_charging", Kostalquery.Qty['Actual battery charge -minus or discharge -plus current'][3]) \
+                .field("battery_voltage", Kostalquery.Qty['Battery voltage'][3]) \
+                .field("battery_soc", Kostalquery.Qty['Battery actual SOC'][3]) \
+                .field("inverter_generation_power", Kostalquery.Qty['Inverter Generation Power (actual)'][3]) \
+                .field("battery_net_capacity", Kostalquery.Qty['Battery Net Capacity'][3]) \
+                .field("actual_battery_charge_power", Kostalquery.Qty['Actual battery charge-discharge power'][3]) \
+                .time(dt, WritePrecision.NS)
+
+            # Write data to InfluxDB
+            write_api.write(bucket=bucket, org=org, record=point)
+
+            # Close the client
+            client.close()
+
+            #try: 
+             #   x = requests.post(url, json= battery_status)
+            #except requests.exceptions.RequestException as e:  # This is the correct syntax
+            #    print (e)
+            # loop.close()
             time.sleep (18)  
                 
     except Exception as Badmain:
         print ("Ran into error executing Main kostal-RESTAPI Routine :", Badmain)
-
-# Close the InfluxDB client
-client.close()
 
