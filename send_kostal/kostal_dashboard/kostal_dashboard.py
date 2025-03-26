@@ -1,3 +1,6 @@
+#------------------------------
+# now CodeQL enabled
+
 import pymodbus
 import psycopg2
 from pymodbus.client.tcp import ModbusTcpClient
